@@ -73,7 +73,7 @@ function hook_client_login_notify($vars)
 }
 
 
-function send_login_notify($myclient, $theuserid="")
+function send_login_notify($clientid, $theuserid="")
 {
 	global $whmcsver;
 
@@ -86,7 +86,7 @@ function send_login_notify($myclient, $theuserid="")
 	if ($whmcsver < 8)
 	{
 
-		$clientinfo = Capsule::table('tblclients')->select('firstname', 'lastname')->WHERE('id', $myclient)->get();
+		$clientinfo = Capsule::table('tblclients')->select('firstname', 'lastname')->WHERE('id', $clientid)->get();
 		foreach ($clientinfo as $clrow)
 		{
 			$firstname = $clrow->firstname;
@@ -96,7 +96,7 @@ function send_login_notify($myclient, $theuserid="")
 	if ($whmcsver >= 8)
 	{
 
-		$clientinfo = Capsule::table('tblusers')->select('first_name', 'last_name')->WHERE('id', $myclient)->get();
+		$clientinfo = Capsule::table('tblusers')->select('first_name', 'last_name')->WHERE('id', $clientid)->get();
 		foreach ($clientinfo as $clrow)
 		{
 			$firstname = $clrow->first_name;
@@ -105,38 +105,47 @@ function send_login_notify($myclient, $theuserid="")
 	}
 
 
-	$values["customtype"] = "general";
 	if (empty($theuserid))
 	{
-		$values["customsubject"] = "Account Login from $hostname";
-		$values["custommessage"] = "<p>Hello $firstname $lastname,<p>Your account was recently successfully accessed by a remote user. If this was not you, please contact us immediately<p>IP Address: $ip<br/>City: $city<br/>Hostname: $hostname<br />";
+		$subject = "Account Login from $hostname";
+		$message = "<p>Hello $firstname $lastname,</p>
+            <p>Your account was recently successfully accessed by a remote user. If this was not you, please contact us immediately</p>
+            <ul>
+                <li>IP Address: $ip</li>
+                <li>City: $city</li>
+                <li>Hostname: $hostname</li>
+            </ul>";
 	}
 
 	elseif ($theuserid > 0)
 	{
-		$moreinfo = Capsule::table('tblusers')->select('first_name', 'last_name', 'email')->WHERE('id', $theuserid)->get();
+		$userinfo = Capsule::table('tblusers')->select('first_name', 'last_name', 'email')->WHERE('id', $theuserid)->get();
 		//greet them
-		foreach ($moreinfo as $userrow)
+		foreach ($userinfo as $user)
 		{
-			$ufirst = $userrow->first_name;
-			$ulast = $userrow->last_name;
-			$uemail = $userrow->email;
+			$ufirst = $user->first_name;
+			$ulast = $user->last_name;
+			$uemail = $user->email;
 		}
 
-		$values["customsubject"] = "Subaccount Login from $hostname";
-		$values["custommessage"] = "<p>Hello
-		$firstname $lastname,<p>
-		A subaccount of yours just logged in. Please see the details of the login below
-		<p>
-		Name: $ufirst $ulast
-		Email: $uemail
-		IP Address: $ip
-		City: $city
-		Hostname: $hostname<br />";
+		$subject = "Subaccount Login from $hostname";
+		$message = "<p>Hello $firstname $lastname,</p>
+            <p>A subaccount of yours just logged in. Please see the details of the login below</p>
+            <ul>
+                <li>Name: $ufirst $ulast</li>
+                <li>Email: $uemail</li>
+                <li>IP Address: $ip</li>
+                <li>City: $city</li>
+                <li>Hostname: $hostname</li>
+            </ul>";
 	}
-	$values["id"] = $myclient;
 
-	$results = localAPI('sendemail', $values);
+	$results = localAPI('sendemail', array(
+        'customtype'        => 'general',
+        'customsubject'     => $subject,
+        'custommessage'     => $message,
+        'id'                => $clientid,
+    ));
 	
 }
 
