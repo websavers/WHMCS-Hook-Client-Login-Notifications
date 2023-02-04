@@ -2,23 +2,21 @@
 
 use WHMCS\Database\Capsule;
 $whmcsver = get_whmcs_version();
-$isadmin = $_SESSION['adminid'];
 
-$admnotify = FALSE;
-//change this to true you want to send notifications when admin logged in..
-//NOT advisable. this will let your clients know when you're logging into their account
+/*
+ * If you want to send notifications when admin logged in as client, change this to true.
+ * It's best not to do this as it will let your clients know when you're logging into their account
+ */
+$notify_when_admin = FALSE;
 
-if (!empty($isadmin))
-{
-	if (!$admnotify)
-	{
-		return;
-	}
-}
 function hook_client_login_notify($vars)
 {
-	$mailsent=FALSE;
+    if (is_admin() && !$notify_when_admin)
+    { 
+        return;
+    }
 
+	$mailsent=FALSE;
 
 	global $whmcsver;
 	$whmcsver = get_whmcs_version();
@@ -107,12 +105,11 @@ function send_login_notify($myclient, $theuserid="")
 	}
 
 
-	$command = "sendemail";
 	$values["customtype"] = "general";
 	if (empty($theuserid))
 	{
 		$values["customsubject"] = "Account Login from $hostname";
-		$values["custommessage"] = "<p>Hello $firstname $lastname,<p>Your account was recently successfully accessed by a remote user. If this was not you, please do contact us immediately<p>IP Address: $ip<br/>City: $city<br/>Hostname: $hostname<br />";
+		$values["custommessage"] = "<p>Hello $firstname $lastname,<p>Your account was recently successfully accessed by a remote user. If this was not you, please contact us immediately<p>IP Address: $ip<br/>City: $city<br/>Hostname: $hostname<br />";
 	}
 
 	elseif ($theuserid > 0)
@@ -139,18 +136,12 @@ function send_login_notify($myclient, $theuserid="")
 	}
 	$values["id"] = $myclient;
 
-	$results = localAPI($command, $values);
+	$results = localAPI('sendemail', $values);
 	
 }
-if ($whmcsver < 8)
-{
-	add_hook('ClientLogin', 1, 'hook_client_login_notify');
-}
-if ($whmcsver >= 8)
 
-{
-	add_hook('UserLogin', 1, 'hook_client_login_notify');
-}
+$hookname = ($whmcsver >= 8)? 'UserLogin':'ClientLogin';
+add_hook($hookname, 1, 'hook_client_login_notify');
 
 function get_whmcs_version()
 {
@@ -158,5 +149,10 @@ function get_whmcs_version()
         $majorver = substr($theversion, 0,1);
 
         return ($majorver);
+}
 
+function is_admin()
+{
+    $adminid = $_SESSION['adminid'];
+    return !empty($adminid);
 }
