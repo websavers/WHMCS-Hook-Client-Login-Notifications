@@ -1,7 +1,7 @@
 <?php
 
 use WHMCS\Database\Capsule;
-$myver = get_whmcs_version();
+$whmcsver = get_whmcs_version();
 $isadmin = $_SESSION['adminid'];
 
 $admnotify = FALSE;
@@ -20,16 +20,16 @@ function hook_client_login_notify($vars)
 	$mailsent=FALSE;
 
 
-	global $myver;
-	$myver = get_whmcs_version();
-	if ($myver < 8)
+	global $whmcsver;
+	$whmcsver = get_whmcs_version();
+	if ($whmcsver < 8)
 	{
 		$userid = $vars['userid'];
 
 		send_login_notify($userid);
 		return;
 	}
-	if ($myver >= 8)
+	if ($whmcsver >= 8)
 	{
 		$user = $vars['user'];
 		$userid = $user->id;
@@ -77,7 +77,7 @@ function hook_client_login_notify($vars)
 
 function send_login_notify($myclient, $theuserid="")
 {
-	global $myver;
+	global $whmcsver;
 
 	$ip = $_SERVER['REMOTE_ADDR'];
 
@@ -85,7 +85,7 @@ function send_login_notify($myclient, $theuserid="")
 	$city = $res->city;
 	$hostname = gethostbyaddr($ip);
 
-	if ($myver < 8)
+	if ($whmcsver < 8)
 	{
 
 		$clientinfo = Capsule::table('tblclients')->select('firstname', 'lastname')->WHERE('id', $myclient)->get();
@@ -95,7 +95,7 @@ function send_login_notify($myclient, $theuserid="")
 			$lastname = $clrow->lastname;
 		}
 	}
-	if ($myver >= 8)
+	if ($whmcsver >= 8)
 	{
 
 		$clientinfo = Capsule::table('tblusers')->select('first_name', 'last_name')->WHERE('id', $myclient)->get();
@@ -142,11 +142,11 @@ function send_login_notify($myclient, $theuserid="")
 	$results = localAPI($command, $values);
 	
 }
-if ($myver < 8)
+if ($whmcsver < 8)
 {
 	add_hook('ClientLogin', 1, 'hook_client_login_notify');
 }
-if ($myver >= 8)
+if ($whmcsver >= 8)
 
 {
 	add_hook('UserLogin', 1, 'hook_client_login_notify');
