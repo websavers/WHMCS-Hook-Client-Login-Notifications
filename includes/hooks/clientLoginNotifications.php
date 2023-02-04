@@ -155,8 +155,8 @@ if ($whmcsver >= 8)
 function get_whmcs_version()
 {
         $theversion = Capsule::table('tblconfiguration')->where('setting', '=', 'Version')->value('value');
-        $retver = substr($theversion, 0,1);
+        $majorver = substr($theversion, 0,1);
 
-        return ($retver);
+        return ($majorver);
 
 }
