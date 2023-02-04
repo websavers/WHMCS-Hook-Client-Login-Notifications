@@ -2,65 +2,42 @@
 
 use WHMCS\Database\Capsule;
 
-/*
- * If you want to send notifications when admin logged in as client, change this to true.
- * It's best not to do this as it will let your clients know when you're logging into their account
- */
-$notify_when_admin = FALSE;
-
 add_hook('UserLogin', 1, function($vars)
 {
-    if (is_admin() && !$notify_when_admin)
-    { 
-        return;
-    }
+    /*
+    * If you want to send notifications when admin logs in as client, 
+    * Comment the following two lines out. It's best to leave it as is.
+    * https://developers.whmcs.com/advanced/authentication/
+    */
+    $currentUser = new \WHMCS\Authentication\CurrentUser;
+    if ($currentUser->isAuthenticatedAdmin()) return;
 
     $user = $vars['user'];
     $userid = $user->id;
 
     // auth_user_id is unique
-    $userobj = Capsule::table('tblusers_clients')->select('auth_user_id', 'client_id', 'owner')->where('auth_user_id', '=', $userid)->get();
+    $userobj = Capsule::table('tblusers_clients')->select('auth_user_id', 'client_id', 'owner')->where('auth_user_id', '=', $userid)->first();
+    $clientid = $userobj->client_id;
 
-    //User is Owner of the account
-    if ($userobj->owner == 1)
-    {
-        send_login_notify($userobj->client_id);
+    // userid is unique
+    $userdata = Capsule::table('tblusers')->select('first_name', 'last_name', 'email', 'last_ip')->where('id', $userid)->first();
+    $firstname = $userdata->first_name;
+    $lastname = $userdata->last_name;
+    $email = $userdata->email;
+
+    $ip = $_SERVER['REMOTE_ADDR'];
+
+    if ($userdata->last_ip === $ip){ 
+        return; //Don't alert if user is logging in from the usual IP
     }
 
-    else //User is not owner of the account: notify the owner
-    {
-        send_login_notify($userobj->client_id, $userid);
-    }
-
-});
-
-
-function send_login_notify($clientid, $theuserid="")
-{
-
-	$ip = $_SERVER['REMOTE_ADDR'];
-
-	$res = json_decode(file_get_contents('https://www.iplocate.io/api/lookup/'.$ip));
-	$city = $res->city;
-	$hostname = gethostbyaddr($ip);
-
-    $clientdata = Capsule::table('tblclients')->select('firstname', 'lastname', 'email')->where('id', $clientid)->first();
-    $firstname = $clientdata->firstname;
-    $lastname = $clientdata->lastname;
-    $email = $clientdata->email;
-
-	if (!empty($theuserid)) //replace client data with user data
-	{
-		$userdata = Capsule::table('tblusers')->select('first_name', 'last_name', 'email')->where('id', $theuserid)->first();
-		$firstname = $userdata->first_name;
-		$lastname = $userdata->last_name;
-		$email = $userdata->email;
-    }
+    $res = json_decode(file_get_contents('https://www.iplocate.io/api/lookup/'.$ip));
+    $city = $res->city;
+    $hostname = gethostbyaddr($ip);
     
-    $subject = "User Login from $hostname";
+    $subject = "User Login from new IP $ip ($hostname)";
     
-    $message = "<p>Hello $firstname $lastname,</p>
-        <p>A user just logged in to your account:</p>
+    $message = "<p>A user just logged in to your account from a different IP than usual:</p>
         <ul>
             <li>Name: $firstname $lastname</li>
             <li>Email: $email</li>
@@ -70,17 +47,11 @@ function send_login_notify($clientid, $theuserid="")
         </ul>
         <p>You can manage the users allowed to access your account here: {$GLOBALS['CONFIG']['SystemURL']}/account/users.</p>";
 
-	$results = localAPI('sendemail', array(
+    $results = localAPI('sendemail', array(
         'customtype'        => 'general',
         'customsubject'     => $subject,
         'custommessage'     => $message,
         'id'                => $clientid,
     ));
-	
-}
-
-function is_admin()
-{
-    $adminid = $_SESSION['adminid'];
-    return !empty($adminid);
-}
+    
+});
