@@ -4,15 +4,24 @@ use WHMCS\Database\Capsule;
 
 add_hook('UserLogin', 1, function($vars)
 {
+    /* 
+     * Set this to a specific user ID (NOTE: not client ID) to enable debug mode
+     * When debug mode is enabled, this hook will only execute fully upon 
+     * login by the user designated here.
+     */
+    $DEBUG_USER_ID = 0;
+
     /*
-    * If you want to send notifications when admin logs in as client, 
-    * Comment the following two lines out. It's best to leave it as is.
-    * https://developers.whmcs.com/advanced/authentication/
-    */
+     * If you want to send notifications when admin logs in as client, 
+     * Comment the following two lines out. It's best to leave it as is.
+     * https://developers.whmcs.com/advanced/authentication/
+     */
     $currentUser = new \WHMCS\Authentication\CurrentUser;
     if ($currentUser->isAuthenticatedAdmin()) return;
 
     $user = $vars['user'];
+
+    if ($DEBUG_USER_ID != $user->id) return;
 
     $userobj = Capsule::table('tblusers_clients')
         ->join('tblusers', 'tblusers_clients.auth_user_id', '=', 'tblusers.id')
