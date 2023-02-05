@@ -31,7 +31,7 @@ add_hook('UserLogin', 1, function($vars)
 
     $userobj = Capsule::table('tblusers_clients')
         ->join('tblusers', 'tblusers_clients.auth_user_id', '=', 'tblusers.id')
-        ->select('tblusers_clients.client_id', 'tblusers_clients.owner', 'tblusers.first_name', 'tblusers.last_name', 'tblusers.last_ip')
+        ->select('tblusers_clients.client_id', 'tblusers_clients.owner', 'tblusers.first_name', 'tblusers.last_name', 'tblusers.email', 'tblusers.last_ip')
         ->where('tblusers_clients.auth_user_id', '=', $user->id)
         ->first();
 
@@ -42,6 +42,9 @@ add_hook('UserLogin', 1, function($vars)
     $last_ip    = $userobj->last_ip;
 
     $ip = $_SERVER['REMOTE_ADDR'];
+
+    //logActivity(print_r($user, 1));
+    logActivity("Cur IP: $ip | Last IP: {$user->lastIp}"); ///DEBUG
 
     if ($last_ip === $ip){ 
         return; // Don't alert if user is logging in from the usual IP
