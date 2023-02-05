@@ -77,16 +77,17 @@ add_hook('UserLogin', 1, function($vars)
 
     // If email template exists, send using that
     $templates = localAPI('GetEmailTemplates', array('type' => 'general'));
-    foreach($tempaltes['emailtemplates']['emailtemplate'] as $template ){
+    foreach($templates['emailtemplates']['emailtemplate'] as $template ){
         if ($template['name'] === $EMAIL_TEMPLATE){
-            $results = localAPI('SendEmail', array(
+            localAPI('SendEmail', array(
                 'messagename'   => $EMAIL_TEMPLATE,
                 'id'            => $clientid,
                 'customvars'    => base64_encode(serialize(array(
-                    'user_fullname'      => $fullname,
-                    'user_city'          => $city,
-                    'user_ip'            => $ip,
-                    'user_hostname'      => $hostname,
+                    'user_fullname'     => $fullname,
+                    'user_email'        => $email,
+                    'user_city'         => $city,
+                    'user_ip'           => $ip,
+                    'user_hostname'     => $hostname,
                 ))),
             ));
             return;
@@ -95,17 +96,15 @@ add_hook('UserLogin', 1, function($vars)
 
     // No email template found, so fallback to send using custom data
     $subject = "User Login from new IP $ip ($hostname)";    
-    $message = "<p>A user just accessed your account from a different IP than usual:</p>
-        <ul>
-            <li>Name: $fullname</li>
-            <li>Email: $email</li>
-            <li>IP Address: $ip</li>
-            <li>City: $city</li>
-            <li>Hostname: $hostname</li>
-        </ul>
-        <p>You can manage the users allowed to access your account here: {$GLOBALS['CONFIG']['SystemURL']}/account/users.</p>";
+    $message = "A user just accessed your account from a different IP than usual:
+ • Name: $fullname
+ • Email: $email
+ • IP Address: $ip
+ • City: $city
+ • Hostname: $hostname
+You can manage the users allowed to access your account here: {$GLOBALS['CONFIG']['SystemURL']}/account/users";
 
-    $results = localAPI('SendEmail', array(
+    localAPI('SendEmail', array(
         'customtype'        => 'general',
         'customsubject'     => $subject,
         'custommessage'     => $message,

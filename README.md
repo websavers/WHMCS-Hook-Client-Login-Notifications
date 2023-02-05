@@ -7,17 +7,17 @@ To use localizations in the email notification, follow these steps:
 1. Follow the WHMCS guide to <a href="https://docs.whmcs.com/Email_Templates#Creating_Custom_Templates">creating a custom email template</a>.
 2. Set the Email Type to 'General' and the Unique name must be: User Login From Different IP
 3. Example Subject: "User Login from new IP {$user_ip} ({$user_hostname})"
-4. Click the 'source code' button and paste in this example message: 
+4. Example Message: 
 ```
-<p>A user just accessed your account from a different IP than usual:</p>
-<ul>
-<li>Name: {$user_fullname}</li>
-<li>Email: {$user_email}</li>
-<li>IP Address: {$user_ip}</li>
-<li>City: {$user_city}</li>
-<li>Hostname: {$user_hostname}</li>
-</ul>
-<p>You can manage the users allowed to access your account here: {$whmcs_url}/account/users.</p>
+A user just accessed your account from a different IP than usual:
+
+• Name: {$user_fullname}
+• Email: {$user_email}
+• IP Address: {$user_ip}
+• City: {$user_city}
+• Hostname: {$user_hostname}
+
+You can manage the users allowed to access your account here: {$whmcs_url}/account/users
 ```
 You can then set your translations in the email templates translations area.
 
