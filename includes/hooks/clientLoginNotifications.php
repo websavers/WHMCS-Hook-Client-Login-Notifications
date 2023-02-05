@@ -17,6 +17,7 @@ add_hook('UserLogin', 1, function($vars)
      * Details in README.md
      */
     $EMAIL_TEMPLATE = 'User Login From Different IP';
+
     /*
      * If you want to send notifications when admin logs in as client, 
      * Comment the following two lines out. It's best to leave it as is.
@@ -27,32 +28,52 @@ add_hook('UserLogin', 1, function($vars)
 
     $user = $vars['user'];
 
+    /* 
+     * This is necessary to create historical records of logins
+     * Because WHMCS does not save past login IP/Hostname values: only current.
+     */
+    $log_description = "User {$user->id} logged in";
+    logActivity($log_description);
+
     if ($DEBUG_USER_ID != $user->id) return;
 
-    $userobj = Capsule::table('tblusers_clients')
-        ->join('tblusers', 'tblusers_clients.auth_user_id', '=', 'tblusers.id')
-        ->select('tblusers_clients.client_id', 'tblusers_clients.owner', 'tblusers.first_name', 'tblusers.last_name', 'tblusers.email', 'tblusers.last_ip')
-        ->where('tblusers_clients.auth_user_id', '=', $user->id)
-        ->first();
+    $fullname   = "{$user->firstName} {$user->lastName}";
+    $email      = $user->email;
+    $ip         = $user->lastIp;
+    $hostname   = $user->lastHostname;
 
-    $clientid   = $userobj->client_id;
-    $firstname  = $userobj->first_name;
-    $lastname   = $userobj->last_name;
-    $email      = $userobj->email;
-    $last_ip    = $userobj->last_ip;
+    /* WHMCS updates this data in the DB *before* this hook runs */
+    $clientid = Capsule::table('tblusers_clients')
+        ->where('auth_user_id', '=', $user->id)
+        ->where('owner', '=', 1)
+        ->value('client_id');
 
-    $ip = $_SERVER['REMOTE_ADDR'];
-
-    //logActivity(print_r($user, 1));
-    logActivity("Cur IP: $ip | Last IP: {$user->lastIp}"); ///DEBUG
-
-    if ($last_ip === $ip){ 
-        return; // Don't alert if user is logging in from the usual IP
+    /*
+     * Obtain the last IP address used to login
+     * https://developers.whmcs.com/api-reference/getactivitylog/
+     */
+    $logentries = localAPI('GetActivityLog', array(
+        'user'          => $email, //docs are wrong about it being name, it should be email.
+        'description'   => $log_description,
+        'limitnum'      => 2 // for performance, when log entries increase in number
+    ));
+    //logActivity(print_r($logentries, 1)); ///DEBUG
+    if ($logentries['totalresults'] < 2){
+        // No history of logins (other than this one) since this hook was added, so don't proceed
+        return;
     }
+    // The most recent log entry (index 0) should be the one we just logged,
+    // so get the one before that (index 1)
+    $last_ip = $logentries['activity']['entry'][1]['ipaddress'];
+    //logActivity("Cur IP: $ip | Last IP: $last_ip"); ///DEBUG
 
+    // Don't alert if user is logging in from the same IP as last time
+    if ($last_ip === $ip) return;
+
+    //$ip = $_SERVER['REMOTE_ADDR'];
+    //$hostname = gethostbyaddr($ip);
     $res = json_decode(file_get_contents('https://www.iplocate.io/api/lookup/'.$ip));
     $city = $res->city;
-    $hostname = gethostbyaddr($ip);
 
     // If email template exists, send using that
     $templates = localAPI('GetEmailTemplates', array('type' => 'general'));
@@ -62,7 +83,7 @@ add_hook('UserLogin', 1, function($vars)
                 'messagename'   => $EMAIL_TEMPLATE,
                 'id'            => $clientid,
                 'customvars'    => base64_encode(serialize(array(
-                    'user_fullname'      => "$firstname $lastname",
+                    'user_fullname'      => $fullname,
                     'user_city'          => $city,
                     'user_ip'            => $ip,
                     'user_hostname'      => $hostname,
@@ -76,7 +97,7 @@ add_hook('UserLogin', 1, function($vars)
     $subject = "User Login from new IP $ip ($hostname)";    
     $message = "<p>A user just accessed your account from a different IP than usual:</p>
         <ul>
-            <li>Name: $firstname $lastname</li>
+            <li>Name: $fullname</li>
             <li>Email: $email</li>
             <li>IP Address: $ip</li>
             <li>City: $city</li>
