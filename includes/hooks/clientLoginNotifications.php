@@ -9,8 +9,14 @@ add_hook('UserLogin', 1, function($vars)
      * When debug mode is enabled, this hook will only execute fully upon 
      * login by the user designated here.
      */
-    $DEBUG_USER_ID = 0;
+    $DEBUG_USER_ID = 149;
 
+    /* 
+     * If you wish to use localizations for the email notification, 
+     * create an email template with this name in the WHMCS admin.
+     * Details in README.md
+     */
+    $EMAIL_TEMPLATE = 'User Login From Different IP';
     /*
      * If you want to send notifications when admin logs in as client, 
      * Comment the following two lines out. It's best to leave it as is.
@@ -38,15 +44,33 @@ add_hook('UserLogin', 1, function($vars)
     $ip = $_SERVER['REMOTE_ADDR'];
 
     if ($last_ip === $ip){ 
-        return; //Don't alert if user is logging in from the usual IP
+        return; // Don't alert if user is logging in from the usual IP
     }
 
     $res = json_decode(file_get_contents('https://www.iplocate.io/api/lookup/'.$ip));
     $city = $res->city;
     $hostname = gethostbyaddr($ip);
-    
-    $subject = "User Login from new IP $ip ($hostname)";
-    
+
+    // If email template exists, send using that
+    $templates = localAPI('GetEmailTemplates', array('type' => 'general'));
+    foreach($tempaltes['emailtemplates']['emailtemplate'] as $template ){
+        if ($template['name'] === $EMAIL_TEMPLATE){
+            $results = localAPI('SendEmail', array(
+                'messagename'   => $EMAIL_TEMPLATE,
+                'id'            => $clientid,
+                'customvars'    => base64_encode(serialize(array(
+                    'user_fullname'      => "$firstname $lastname",
+                    'user_city'          => $city,
+                    'user_ip'            => $ip,
+                    'user_hostname'      => $hostname,
+                ))),
+            ));
+            return;
+        }
+    }
+
+    // No email template found, so fallback to send using custom data
+    $subject = "User Login from new IP $ip ($hostname)";    
     $message = "<p>A user just accessed your account from a different IP than usual:</p>
         <ul>
             <li>Name: $firstname $lastname</li>
