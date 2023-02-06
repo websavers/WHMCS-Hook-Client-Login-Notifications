@@ -21,7 +21,7 @@ You can manage the users allowed to access your account here: {$whmcs_url}/accou
 ```
 You can then set your translations in the email templates translations area.
 
-# Original Source
+# Original Source Code
 https://whmcs.community/topic/258817-client-account-login-notification-hook/page/4/?tab=comments#comment-1347010
 
 # Credits
@@ -30,5 +30,8 @@ Contributions by brian!
 Rewritten by websavers
 
 # Requirements
-Backwards compatibility was removed for code readability and so this only works with WHMCS 8.
-Tested with PHP 8.1. Probably works with PHP 7.4 and 8.0
+- WHMCS: Backwards compatibility was removed for code readability and so this only works with WHMCS 8.
+- PHP: Tested with PHP 8.1. Probably works with PHP 7.4 and 8.0
+
+# IPLocate
+This code uses <a href="https://www.iplocate.io/pricing">IPLocate</a> which provides 1000 daily requests free. Anything more and you will need to pay them. Given that we only utilize the IPLocate API when an IP has changed since the last user login, the free 1000 daily lookups are probably sufficient for most WHMCS users.
